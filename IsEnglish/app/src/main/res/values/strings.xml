@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">IsEnglish</string>
+    <string name="predict">Predict</string>
+    <string name="hasil">hasil</string>
+</resources>
