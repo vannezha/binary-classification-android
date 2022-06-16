@@ -17,80 +17,43 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+//        create IO UI
         val tv : TextView = findViewById(R.id.textView)
-
         val button : Button = findViewById(R.id.button)
-        button.setOnClickListener {
 
+        button.setOnClickListener {
+    //            get input (string)
             val ed: EditText = findViewById(R.id.inputIsEnglish)
             val inputIsEnglish: String = ed.text.toString()
-            val seq = this.sequenize(this.splitLowerRemovePunctuation(inputIsEnglish))
-            val floatseq = floatArrayOf(
-                seq[0],
-                seq[1],
-                seq[2],
-                seq[3],
-                seq[4],
-                seq[5],
-                seq[6],
-                seq[7],
-                seq[8],
-                seq[9],
-                seq[10],
-                seq[11],
-                seq[12],
-                seq[13],
-                seq[14],
-                seq[15],
-                seq[16],
-                seq[17],
-                seq[18],
-                seq[19],
-                seq[20],
-                seq[21],
-                seq[22],
-                seq[23],
-                seq[24],
-                seq[25],
-                seq[26],
-                seq[27],
-                seq[28],
-                seq[29],
-                seq[30],
-                seq[31]
-            )
-
-
-            val model = LanguageClassification.newInstance(this)
-
-            val inputFeature = TensorBuffer.createFixedSize(intArrayOf(1, 32), DataType.FLOAT32)
-
-            inputFeature.loadArray(floatseq)
-            val outputs = model.process(inputFeature)
-            val outputFeature = outputs.outputFeature0AsTensorBuffer.floatArray
-            val english: String
-            if (outputFeature[0] >= 0.5) {
-                english = "Bahasa Indonesia"
-            } else {
-                english = "Bahasa Inggris"
-            }
-
-            val prob = outputFeature[0].toString()
-            tv.text =
-                "Hasil:$english\nProbability:$prob\nSequence:\n$seq\nInput\n$inputIsEnglish"
-            model.close()
+            val isEnglish = isEnglish(inputIsEnglish)
+    //          show it in textView
+            tv.text = isEnglish.toString()
         }
-
-
     }
-    fun wordIndex(): Map<String, *> {
+
+    //    5 function that needed to do input preprossing
+    private fun isEnglish(inputIsEnglish: String): Boolean {
+        //            alocate some memory
+        val inputFeature = TensorBuffer.createFixedSize(intArrayOf(1, 32), DataType.FLOAT32)
+        //          preprocess input
+        val seq = this.sequenize(this.splitLowerRemovePunctuation(inputIsEnglish))
+        //          initiate a model
+        val model = LanguageClassification.newInstance(this)
+        //          doing inference and close the model after it
+        inputFeature.loadArray(seq.toFloatArray())
+        val outputs = model.process(inputFeature)
+        model.close()
+        //          output (boolean)
+        val outputFeature = outputs.outputFeature0AsTensorBuffer.floatArray
+        return outputFeature[0] < 0.5
+    }
+    private fun wordIndex(): Map<String, *> {
         val json: String?
         val inputStream: InputStream = assets.open("IsEnglish.json")
         json = inputStream.bufferedReader().use { it.readText() }.toString()
         return JSONObject(json).toMap()
     }
-
-    fun JSONObject.toMap(): Map<String, *> = keys().asSequence().associateWith { it ->
+    private fun JSONObject.toMap(): Map<String, *> = keys().asSequence().associateWith { it ->
         when (val value = this[it])
         {
             is JSONArray ->
@@ -103,11 +66,11 @@ class MainActivity : AppCompatActivity() {
             else            -> value
         }
     }
-    fun splitLowerRemovePunctuation(source:String): Array<String> {
+    private fun splitLowerRemovePunctuation(source:String): Array<String> {
         val str = source.replace("[!\"#$%&'()*+,-./:;<=>?@\\[\\]^_`{|}~]".toRegex(), "").trim()
         return str.split("\\s+".toRegex()).toTypedArray()
     }
-    fun sequenize(source: Array<String>):ArrayList<Float> {
+    private fun sequenize(source: Array<String>):ArrayList<Float> {
         var counter = 32
         val seq = arrayListOf<Float>()
         for (i in source){
